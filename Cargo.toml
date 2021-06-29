@@ -1,5 +1,5 @@
 [package]
-name = "TASC"
+name = "tasc"
 version = "0.1.0"
 authors = ["chase <clstlaurent@wpi.edu>"]
 edition = "2018"
@@ -7,3 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+simplers_optimization = "*"
+time = "*"
+
+#rand = "*"
+#rand_xorshift = "*"
+#ndarray-linalg = {version = "*", features=["intel-mkl-static"]}
+#argmin = {version="0.4.5", features=["ndarrayl"]}
+#argmin_testfunctions = "*"
+differential-evolution = "*"
