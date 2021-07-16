@@ -9,10 +9,16 @@ edition = "2018"
 [dependencies]
 simplers_optimization = "*"
 time = "*"
+argmin = "*"
 
-#rand = "*"
-#rand_xorshift = "*"
-#ndarray-linalg = {version = "*", features=["intel-mkl-static"]}
-#argmin = {version="0.4.5", features=["ndarrayl"]}
-#argmin_testfunctions = "*"
+rand = "0.8.4"
+rand_xorshift = "*"
+rand_distr = "*"
+argmin_testfunctions = "*"
 differential-evolution = "*"
+num="*"
+
+ndarray= "*"
+ndarray-linalg = "*"
+ndarray-rand = "*"
+ndarray-stats = "*"
