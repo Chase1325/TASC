@@ -72,15 +72,15 @@ def differential_evolution(pop_size, bounds, iter, F, cr):
         pop_std = np.std(obj_all)
         pop_energy = np.abs(np.mean(obj_all))
         #print(pop_std<1e-8*pop_energy)
-        print(pop_energy-abs(best_obj))
+        #print(pop_energy-abs(best_obj))
         if best_obj < prev_obj:
             best_vector = pop[np.argmin(obj_all)]
             prev_obj = best_obj
             # report progress at each iteration
             #print('Iteration: %d f([%s]) = %.16f' % (i, np.around(best_vector, decimals=4), best_obj))
-            if abs(pop_energy-abs(best_obj)) < 1e-8 and i>100:
-                print('Iteration: %d f([%s]) = %.16f' % (i, np.around(best_vector, decimals=4), best_obj))
-                break
+            #if abs(pop_energy-abs(best_obj)) < 1e-8 and i>100:
+                #print('Iteration: %d f([%s]) = %.16f' % (i, np.around(best_vector, decimals=4), best_obj))
+                #break
         #else:
          #   print('Iteration: %d f([%s]) = %.16f' % (i, np.around(best_vector, decimals=4), best_obj))
     return [best_vector, best_obj]

@@ -12,10 +12,12 @@ use rand_xorshift::XorShiftRng;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use ndarray::{Array, Axis};
+use ndarray::s;
+use ndarray::{Array, Axis, Ix1};
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::Uniform;
 use ndarray_stats::QuantileExt;
+use rand::seq::SliceRandom;
 
 struct Testfunc {}
 
@@ -100,8 +102,8 @@ fn run() -> Result<(), Error> {
 }
 
 
-fn evolution<F>(bounds: Vec<(f64, f64)>, obj_func: F) -> Vec<f64> where F: Fn(&[f64]) -> f64 {
-    let pop_size: usize = 10*bounds.len();
+fn evolution<F>(bounds: Vec<(f64, f64)>, obj_func: F) -> (Vec<f64>, f64) where F: Fn(&[f64]) -> f64 {
+    let pop_size: usize = 25*bounds.len();
     let f: f64 = 0.8;
     let cr: f64 = 0.9;
     let max_iter: usize = 1000;
@@ -113,53 +115,89 @@ fn evolution<F>(bounds: Vec<(f64, f64)>, obj_func: F) -> Vec<f64> where F: Fn(&[
     let mut pop = Array::random((pop_size, bounds.len()), Uniform::new(0., 1.));
     pop = lb + pop * diffb;
 
-    let obj_all= Array::from_vec(pop.axis_iter(Axis(0)).map(|row| obj_func(&row.to_vec())).collect());
+    let mut obj_all = Array::from_vec(pop.axis_iter(Axis(0)).map(|row| obj_func(&row.to_vec())).collect());
 
-    //println!("{:?}", obj_all);
+    let mut best_vec = pop.row(obj_all.argmin().unwrap()).to_vec();
+    let mut best_obj = obj_all.min().unwrap().clone();
+    let mut prev_obj = best_obj.clone();
 
-    let mut best_vec = pop.row(obj_all.argmin().unwrap());
-    //println!("{:?}", best_vec);
-    let mut best_obj = obj_all.min().unwrap();
-    //println!("{:?}", best_obj);
-    let prev_obj = best_obj.clone();
+    let candidates: Vec<usize> = (0..pop_size).collect();
+    let mut candid_pop: [usize; 3] = [0; 3];
 
     for i in 0..max_iter {
         for j in 0..pop_size {
             //choose 3 candidates, no replacement, not current j value
-            continue;
+            let mut filled: usize = 0;
+            while filled < 3 {
+                let rand_candid = *candidates.choose(&mut rand::thread_rng()).unwrap();
+                if rand_candid != j {
+                    candid_pop[filled] = rand_candid;
+                    filled += 1;
+                }
+            }
+            //Perform Mutation
+            let a = pop.index_axis(Axis(0), candid_pop[0]);
+            let b = pop.index_axis(Axis(0), candid_pop[1]);
+            let c = pop.index_axis(Axis(0), candid_pop[2]);
+            let mut mutation: Array<f64, Ix1> = &a + f * (&b-&c);
+            for k in 0..bounds.len() {
+                mutation[k] = mutation[k].clamp(bounds[k].0, bounds[k].1);
+            }
+
+            //Perform Crossover
+            let mut trial: Array<f64, Ix1> = mutation.clone(); 
+            let mut target = pop.slice_mut(s![j, ..]);
+            for k in 0..bounds.len() {
+                if rand::thread_rng().gen::<f64>() > cr {
+                    trial[k] = target[k];
+                }
+            }
+
+            //Perform Selection
+            let target_cost = obj_func(&target.to_vec());
+            let trial_cost = obj_func(&trial.to_vec());
+            if trial_cost < target_cost {
+                target.assign(&trial);
+                obj_all[j] = trial_cost;
+            }
+
+        //Find Best Agent
+        best_obj = obj_all.min().unwrap().clone();
+        if best_obj < prev_obj{
+            if (obj_all.mean().unwrap().abs()-best_obj.abs()).abs() < 1e-3 && i > 25 {
+                best_vec = pop.row(obj_all.argmin().unwrap()).to_vec();
+                println!("{}", i);
+                return (best_vec, best_obj)
+            }
+            best_vec = pop.row(obj_all.argmin().unwrap()).to_vec();
+            prev_obj = best_obj.clone();
+        }
         }
     }
-
-    vec![12.]
+    (best_vec, best_obj)
 }
 
 fn main() {
-    //fn eggholder(v: &[f32]) -> f32 {(-1. * (v[1] + 47.) * ((v[1] + v[0]/2. + 47.).abs().sqrt().sin())) - v[0] * ((v[0]-(v[1]+47.)).abs().sqrt().sin())}
-    fn himmel(v: &[f32]) -> f32 {(v[0].powi(2) + v[1]-11.).powi(2) + (v[0] + v[1].powi(2) -7.).powi(2)}
+    fn eggholder(v: &[f64]) -> f64 {(-1. * (v[1] + 47.) * ((v[1] + v[0]/2. + 47.).abs().sqrt().sin())) - v[0] * ((v[0]-(v[1]+47.)).abs().sqrt().sin())}
+    fn himmel(v: &[f64]) -> f64 {(v[0].powi(2) + v[1]-11.).powi(2) + (v[0] + v[1].powi(2) -7.).powi(2)}
     fn easom(v: &[f64]) -> f64 {-(v[0]).cos()*(v[1].cos()*(-((v[0]-std::f64::consts::PI).powi(2) + (v[1]-std::f64::consts::PI).powi(2))).exp())}
     let initial_min_max = vec![(-100., 100.); 2];
 
-   /*let mut de = self_adaptive_de(initial_min_max, easom);
-
-    let start = Instant::now();
-    de.iter().nth(1_000_000);//take(1000);//.find(|&cost| cost < -930.);
-    let end = start.elapsed();
-    let (cost, pos) = de.best().unwrap();
-    println!("max value: {} found in [{}, {}], in {:.8?} seconds", cost, pos[0], pos[1], end);
-
-    let initial_min_max = vec![(-100., 100.); 2];
+  
+    let initial_min_max = vec![(-512., 512.); 2];
 
     let start = Instant::now();
     let (max_val, coord) = Optimizer::minimize(&easom, &initial_min_max, 10000);//Optimizer::new(&eggholder, &initial_min_max, true).set_exploration_depth(5).skip(100).skip_while(|(value, coords)| *value > -958.).next().unwrap();
     let end = start.elapsed();
     println!("max value: {} found in [{}, {}], in {:.8?} seconds", max_val, coord[0], coord[1], end);
-    if let Err(ref e) = run() {
-        println!("{}", e);
-    }*/
+    //if let Err(ref e) = run() {
+    //    println!("{}", e);
+    //}
     let start = Instant::now();
-    evolution(initial_min_max, &easom);
+    let res = evolution(initial_min_max, &himmel);
     let end = start.elapsed();
-    println!("{:?}", end);
+    println!("{:?}", &res);
+    println!("{:?} seconds", end.as_seconds_f64());
 }
 
 /*pub struct Testfunc {}
