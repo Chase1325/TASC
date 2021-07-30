@@ -7,16 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-simplers_optimization = "*"
 time = "*"
-argmin = "*"
 
 rand = "0.8.4"
 rand_xorshift = "*"
 rand_distr = "*"
-argmin_testfunctions = "*"
-differential-evolution = "*"
-num="*"
 
 ndarray= "*"
 ndarray-linalg = "*"
